@@ -45,7 +45,6 @@
 
 pub mod report;
 use report::{Method, Report};
-
 use std::borrow::Cow;
 use std::io::Result as IoResult;
 use std::panic::PanicInfo;
@@ -63,6 +62,8 @@ pub struct Metadata {
     pub authors: Cow<'static, str>,
     /// The URL of the crate's website
     pub homepage: Cow<'static, str>,
+    /// The Path to save the file to
+    pub path_to_save_log_to: PathBuf,
 }
 
 /// Initialize [`Metadata`]
@@ -74,6 +75,7 @@ macro_rules! metadata {
             name: env!("CARGO_PKG_NAME").into(),
             authors: env!("CARGO_PKG_AUTHORS").replace(":", ", ").into(),
             homepage: env!("CARGO_PKG_HOMEPAGE").into(),
+            path_to_save_log_to: std::env::temp_dir(),
         }
     };
 }
@@ -245,7 +247,7 @@ pub fn handle_dump(meta: &Metadata, panic_info: &PanicInfo) -> Option<PathBuf> {
         None => expl.push_str("Panic location unknown.\n"),
     }
 
-    let report = Report::new(&meta.name, &meta.version, Method::Panic, expl, cause);
+    let report = Report::new(&meta.name, &meta.version, Method::Panic, expl, cause,&meta.path_to_save_log_to);
 
     match report.persist() {
         Ok(f) => Some(f),

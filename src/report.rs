@@ -7,6 +7,7 @@ use backtrace::Backtrace;
 use serde_derive::Serialize;
 use std::error::Error;
 use std::fmt::Write as FmtWrite;
+use std::fs::create_dir_all;
 use std::mem;
 use std::{env, fs::File, io::Write, path::Path, path::PathBuf};
 use uuid::Uuid;
@@ -31,6 +32,7 @@ pub struct Report {
     cause: String,
     method: Method,
     backtrace: String,
+    path: PathBuf,
 }
 
 impl Report {
@@ -41,6 +43,7 @@ impl Report {
         method: Method,
         explanation: String,
         cause: String,
+        path_to_save: &PathBuf,
     ) -> Self {
         let operating_system = os_info::get().to_string();
 
@@ -114,6 +117,7 @@ impl Report {
             explanation,
             cause,
             backtrace,
+            path:path_to_save.to_owned()
         }
     }
 
@@ -125,8 +129,14 @@ impl Report {
     /// Write a file to disk.
     pub fn persist(&self) -> Result<PathBuf, Box<dyn Error + 'static>> {
         let uuid = Uuid::new_v4().hyphenated().to_string();
-        let tmp_dir = env::temp_dir();
-        let file_name = format!("report-{}.toml", &uuid);
+        let binding = env::temp_dir();
+        let tmp_dir = match(create_dir_all(&self.path)){
+            Ok(_) => &self.path,
+            Err(_) => &binding,
+        };
+        let date = chrono::Local::now();
+        let current_date = date.format("%Y-%m-%d %H:%M").to_string();
+        let file_name = format!("report-{}-{}.toml",current_date, &uuid);
         let file_path = Path::new(&tmp_dir).join(file_name);
         let mut file = File::create(&file_path)?;
         let toml = self.serialize().unwrap();
